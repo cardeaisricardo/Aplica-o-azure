@@ -1,63 +1,70 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
-const db = require('./db');
+const express = require("express");
+const path = require("path");
+
+const {
+  inserirMensagem,
+  listarMensagens,
+  criarTabela
+} = require("./db");
 
 const app = express();
+
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Rota para servir a página inicial
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.use(express.static(path.join(__dirname, "public")));
 
-// API: Listar todas as mensagens
-app.get('/api/mensagens', async (req, res) => {
+app.get("/api/mensagens", async (req, res) => {
   try {
-    const mensagens = await db.listarMensagens();
+    const mensagens = await listarMensagens();
     res.json(mensagens);
   } catch (err) {
-    console.error('Erro ao listar mensagens:', err);
-    res.status(500).json({ erro: 'Erro ao listar mensagens' });
+    console.error(err);
+    res.status(500).json({
+      erro: "Erro ao listar mensagens"
+    });
   }
 });
 
-// API: Inserir uma nova mensagem
-app.post('/api/mensagens', async (req, res) => {
+app.post("/api/mensagens", async (req, res) => {
   try {
-    const { mensagem } = req.body;
+    const { texto } = req.body;
 
-    if (!mensagem || mensagem.trim() === '') {
-      return res.status(400).json({ erro: 'Mensagem não pode estar vazia' });
+    if (!texto || texto.trim() === "") {
+      return res.status(400).json({
+        erro: "Mensagem inválida"
+      });
     }
 
-    await db.inserirMensagem(mensagem);
-    res.json({ sucesso: true, mensagem: 'Mensagem salva com sucesso!' });
+    await inserirMensagem(texto);
+
+    res.json({
+      sucesso: true
+    });
   } catch (err) {
-    console.error('Erro ao inserir mensagem:', err);
-    res.status(500).json({ erro: 'Erro ao salvar mensagem' });
+    console.error(err);
+    res.status(500).json({
+      erro: "Erro ao salvar mensagem"
+    });
   }
 });
 
-// Inicializar a aplicação
-async function inicializar() {
-  try {
-    // Criar tabela se não existir
-    await db.criarTabela();
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
-    // Iniciar o servidor
+async function iniciar() {
+  try {
+    await criarTabela();
+
     app.listen(PORT, () => {
-      console.log(`Servidor rodando em http://localhost:${PORT}`);
+      console.log(`Servidor iniciado na porta ${PORT}`);
     });
   } catch (err) {
-    console.error('Erro ao inicializar a aplicação:', err);
-    process.exit(1);
+    console.error("Erro ao iniciar aplicação:", err);
   }
 }
 
-inicializar();
+iniciar();
